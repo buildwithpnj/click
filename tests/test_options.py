@@ -1179,6 +1179,31 @@ def test_missing_envvar(runner):
     assert result.exit_code == 2
     assert "Error: Missing option '--foo'." in result.output
 
+    cli = click.Command(
+        "cli",
+        params=[click.Option(["--foo"], show_envvar=True, required=True)],
+        context_settings={"auto_envvar_prefix": "TEST"},
+    )
+    result = runner.invoke(cli)
+    assert result.exit_code == 2
+    assert "Error: Missing option '--foo' (env var: 'TEST_FOO')." in result.output
+
+
+def test_show_envvar_auto_prefix_error_hint(runner):
+    @click.group(context_settings={"auto_envvar_prefix": "MYAPP"})
+    def cli():
+        pass
+
+    @cli.command()
+    @click.option("--port", type=int, required=True, show_envvar=True)
+    def run(port):
+        pass
+
+    result = runner.invoke(cli, ["run"])
+    assert result.exit_code == 2
+    expected = "Error: Missing option '--port' (env var: 'MYAPP_RUN_PORT')."
+    assert expected in result.output
+
 
 @pytest.mark.parametrize(
     ("envvar", "expected"),
